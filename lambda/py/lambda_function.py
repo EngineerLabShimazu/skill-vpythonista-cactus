@@ -15,12 +15,12 @@ from ask_sdk_model import Response
 from ask_sdk_model import ui
 from alexa import data
 
-from ask_sdk_dynamodb.adapter import DynamoDbAdapter
-dynamodb_adapter = DynamoDbAdapter(
-    table_name="test_table", partition_keygen=partition_keygen,
-    dynamodb_resource=dynamodb_resource)
+# from ask_sdk_dynamodb.adapter import DynamoDbAdapter
+# dynamodb_adapter = DynamoDbAdapter(
+#     table_name="test_table", partition_keygen=partition_keygen,
+#     dynamodb_resource=dynamodb_resource)
 
-sb = SkillBuilder(dynamodb_adapter)
+# sb = SkillBuilder(dynamodb_adapter)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
