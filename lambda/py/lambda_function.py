@@ -25,9 +25,6 @@ from alexa import data
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-IMAGE_SMALL = '画像小のS3のURL'
-IMAGE_MIDDLE = '画像中のS3のURL'
-IMAGE_LARGE = '画像大のS3のURL'
 
 class LaunchRequestHandler(AbstractRequestHandler):
     """Handler for Skill Launch."""
