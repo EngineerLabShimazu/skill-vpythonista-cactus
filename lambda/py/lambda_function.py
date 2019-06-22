@@ -21,6 +21,7 @@ from alexa import data
 #     dynamodb_resource=dynamodb_resource)
 
 # sb = SkillBuilder(dynamodb_adapter)
+sb = SkillBuilder()
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
