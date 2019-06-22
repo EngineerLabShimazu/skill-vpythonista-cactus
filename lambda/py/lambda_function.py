@@ -129,21 +129,6 @@ class CatchAllExceptionHandler(AbstractExceptionHandler):
         return handler_input.response_builder.response
 
 
-def getHeight():
-    """
-    永続アトリビュートからheightを取得
-    :param height
-    """
-    pass
-    
-
-def getImage(height):
-    """
-    S3からさぼてんの画像を取得
-    :param height
-    """
-    pass
-        
 sb.add_request_handler(LaunchRequestHandler())
 sb.add_request_handler(HelloWorldIntentHandler())
 sb.add_request_handler(HelpIntentHandler())
