@@ -30,35 +30,19 @@ sb = StandardSkillBuilder(table_name="cactus", auto_create_table=True)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-class LaunchRequestHandler(AbstractRequestHandler):
-    """Handler for Skill Launch."""
+class NoIntentHandler(AbstractRequestHandler):
     def can_handle(self, handler_input):
         # type: (HandlerInput) -> bool
-        return is_request_type("LaunchRequest")(handler_input)
+        return is_intent_name("AMAZON.NoIntent")(handler_input)
 
     def handle(self, handler_input):
-        should_end_session = False
         attr = handler_input.attributes_manager.persistent_attributes
-        watering_count = attr.get('watering_count', 0)
-        last_watered_date = attr.get('last_watered_date')
+        height = attr.get('height')
 
-        # get height
-        height = 0
-        if type(attr) is dict:
-            height = attr.get('height', 0)
-
-        # build ssml
         speech = Speech()
-        speech.add_text(data.WELCOME_MESSAGE)
-        speech.add_text('身長は{}センチメートルです。'.format(str(height)))
-        if last_watered_date != str(datetime.date.today()):
-            speech.add_text('さぼてんに水をあげますか？')
-        else:
-            speech.add_text('また{}水やりしてくださいね。'.format(speech.sub(value="明日", alias="あした", is_nested=True)))
-            should_end_session = True
+        speech.add_text('明日も水を上げてくださいね。スキルを終了します。')
         speech_text = speech.speak()
-
-        # add diplay interface
+        
         images = {
             0: data.CACTUS_CHRIS_IMAGE_01,
             5: data.CACTUS_CHRIS_IMAGE_01,
@@ -81,14 +65,6 @@ class LaunchRequestHandler(AbstractRequestHandler):
                 BodyTemplate2(
                     back_button=BackButtonBehavior.VISIBLE,
                     image=ret_img, title=title,
-                    text_content=primary_text))
-                    ).set_should_end_session(
-                        should_end_session
-                    )
+                    text_content=primary_text))).set_should_end_session(True)
 
-        if last_watered_date != str(datetime.date.today()):
-            # set confirmation status in session_attributes
-            handler_input.attributes_manager.session_attributes['status'] = 'confirmation'
-            return handler_input.response_builder.speak(speech_text).ask(speech_text).response
-        else:
-            return handler_input.response_builder.speak(speech_text).response
+        return handler_input.response_builder.speak(speech_text).response

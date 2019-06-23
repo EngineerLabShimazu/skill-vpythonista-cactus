@@ -5,6 +5,7 @@
 from ask_sdk.standard import StandardSkillBuilder
 from handlers.launch_request_handler import LaunchRequestHandler
 from handlers.yes_intent_handler import YesIntentHandler
+from handlers.no_intent_handler import NoIntentHandler
 from handlers.help_intent_handler import HelpIntentHandler
 from handlers.cancel_or_stop_intent_handler import CancelOrStopIntentHandler
 from handlers.session_ended_request_handler import SessionEndedRequestHandler
@@ -17,6 +18,7 @@ sb.add_request_handler(HelpIntentHandler())
 sb.add_request_handler(CancelOrStopIntentHandler())
 sb.add_request_handler(SessionEndedRequestHandler())
 sb.add_request_handler(YesIntentHandler())
+sb.add_request_handler(NoIntentHandler())
 
 sb.add_exception_handler(CatchAllExceptionHandler())
 

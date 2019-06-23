@@ -1,8 +1,28 @@
 {
     "interactionModel": {
         "languageModel": {
-            "invocationName": "ことだまさぼてん",
+            "invocationName": "すくすくさぼてん",
             "intents": [
+                {
+                    "name": "AMAZON.YesIntent",
+                    "samples": [
+                        "はい",
+                        "イエス",
+                        "おっけー",
+                        "みず",
+                        "水をあげる"
+                    ]
+                },
+                {
+                    "name": "AMAZON.NoIntent",
+                    "samples": [
+                        "いいえ",
+                        "ノー",
+                        "大丈夫",
+                        "やめとく",
+                        "水をあげない"
+                    ]
+                },
                 {
                     "name": "AMAZON.CancelIntent",
                     "samples": []
@@ -14,20 +34,6 @@
                 {
                     "name": "AMAZON.StopIntent",
                     "samples": []
-                },
-                {
-                    "name": "HelloWorldIntent",
-                    "slots": [],
-                    "samples": [
-                        "さぼてんそだてよー",
-                        "how are you",
-                        "say hi world",
-                        "say hi",
-                        "hi",
-                        "hello",
-                        "say hello world",
-                        "say hello"
-                    ]
                 }
             ],
             "types": []
