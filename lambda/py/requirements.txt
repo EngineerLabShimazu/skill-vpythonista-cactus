@@ -1,4 +1,0 @@
-ask-sdk-core
-ask_sdk
-ask-sdk-dynamodb-persistence-adapter
-ssml-builder

@@ -1,94 +1,146 @@
 # -*- coding: utf-8 -*-
 
+import os
 import datetime
 import logging
 
-from ask_sdk.standard import StandardSkillBuilder
-
 from ask_sdk_core.dispatch_components import AbstractRequestHandler
-from ask_sdk_core.dispatch_components import AbstractExceptionHandler
-from ask_sdk_core.utils import is_request_type, is_intent_name
+from ask_sdk_core.utils import is_request_type
 from ask_sdk_core.handler_input import HandlerInput
-
 from ask_sdk_core.response_helper import get_plain_text_content
-
-from ask_sdk_model.ui import SimpleCard
-from ask_sdk_model.ui import StandardCard
-from ask_sdk_model import Response
-
+from ask_sdk_model import ui
 from ask_sdk_model.interfaces.display import (
     ImageInstance, Image, RenderTemplateDirective,
     BackButtonBehavior, BodyTemplate2)
-
 from ssml_builder.core import Speech
-
 from alexa import data
 from alexa import utils
-
-sb = StandardSkillBuilder(table_name="cactus", auto_create_table=True)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+
 class LaunchRequestHandler(AbstractRequestHandler):
     """Handler for Skill Launch."""
+
     def can_handle(self, handler_input):
         # type: (HandlerInput) -> bool
         return is_request_type("LaunchRequest")(handler_input)
 
     def handle(self, handler_input):
-        should_end_session = False
-        attr = handler_input.attributes_manager.persistent_attributes
-        watering_count = attr.get('watering_count', 0)
-        last_watered_date = attr.get('last_watered_date')
+        last_watered_date = utils.get_last_watered_date(handler_input)
 
-        # get height
-        height = 0
-        if type(attr) is dict:
-            height = attr.get('height', 0)
+        height = utils.get_cactus_height(handler_input)
 
-        # build ssml
-        speech = Speech()
-        speech.add_text(data.WELCOME_MESSAGE)
-        speech.add_text('身長は{}センチメートルです。'.format(str(height)))
-        if last_watered_date != str(datetime.date.today()):
-            speech.add_text('さぼてんに水をあげますか？')
-        else:
-            speech.add_text('また{}水やりしてくださいね。'.format(speech.sub(value="明日", alias="あした", is_nested=True)))
-            should_end_session = True
-        speech_text = speech.speak()
+        speech_text = LaunchResponseCreator().create_response(
+            height, last_watered_date, handler_input
+        )
+        cactus_image = utils.ImageGetter().get_image(
+            utils.get_level(height), utils.select_scene()
+        )
+        logger.info(f'launch_h, cactus_image: {cactus_image}')
+        ret_img = Image(sources=[ImageInstance(url=cactus_image)])
 
-        # add diplay interface
-        images = {
-            0: data.CACTUS_CHRIS_IMAGE_01,
-            5: data.CACTUS_CHRIS_IMAGE_01,
-            10: data.CACTUS_CHRIS_IMAGE_02,
-            15: data.CACTUS_CHRIS_IMAGE_03,
-            20: data.CACTUS_CHRIS_IMAGE_04,
-            25: data.CACTUS_CHRIS_IMAGE_05,
-            30: data.CACTUS_CHRIS_IMAGE_06,
-            35: data.CACTUS_CHRIS_IMAGE_07
-        }
-        img = images.get(height, data.CACTUS_CHRIS_IMAGE_07)
-
-        ret_img = Image(sources=[ImageInstance(url=img)])
-        title = data.SKILL_NAME
         primary_text = get_plain_text_content(
             primary_text="")
 
-        handler_input.response_builder.add_directive(
-            RenderTemplateDirective(
-                BodyTemplate2(
-                    back_button=BackButtonBehavior.VISIBLE,
-                    image=ret_img, title=title,
-                    text_content=primary_text))
-                    ).set_should_end_session(
-                        should_end_session
-                    )
+        if utils.supports_apl(handler_input):
+            handler_input.response_builder.add_directive(
+                RenderTemplateDirective(
+                    BodyTemplate2(
+                        back_button=BackButtonBehavior.VISIBLE,
+                        image=ret_img, title=data.SKILL_NAME,
+                        text_content=primary_text))
+            )
 
-        if last_watered_date != str(datetime.date.today()):
-            # set confirmation status in session_attributes
-            handler_input.attributes_manager.session_attributes['status'] = 'confirmation'
-            return handler_input.response_builder.speak(speech_text).ask(speech_text).response
+        handler_input.response_builder.set_card(
+            ui.StandardCard(
+                title=data.get_standard_card_title(height),
+                text=data.get_standard_card_text(height),
+                image=ui.Image(
+                    small_image_url=cactus_image,
+                    large_image_url=cactus_image
+                )
+            )
+        )
+
+        should_end_session = True
+        status = 'check_state'
+
+        scene = get_scene(handler_input)
+        if scene == 'water':
+            should_end_session = False
+            status = 'confirmation'
+        elif scene == 'upsell':
+            should_end_session = False
+            status = 'isp_better_water'
+
+        handler_input.attributes_manager.session_attributes[
+            'status'] = status
+        if should_end_session:
+            return handler_input.response_builder.speak(speech_text).set_should_end_session(should_end_session).response
+        return handler_input.response_builder.speak(speech_text).ask(speech_text).set_should_end_session(should_end_session).response
+
+
+class LaunchResponseCreator:
+    def __init__(self):
+        self.speech = Speech()
+
+    def create_response(self, height, last_watered_date, handler_input):
+        self.pre_response()
+
+        if height == 0:
+            return self.seed_response()
+
+        self.base_launch_response(height)
+
+        if utils.can_water(last_watered_date):
+            return self.can_water_response(handler_input)
+
+        return self.cannot_water_response(height, handler_input)
+
+    def pre_response(self):
+        if os.environ.get('AWS_LAMBDA_FUNCTION_VERSION') == '$LATEST':
+            self.speech.add_text('デブです。')
+
+    def seed_response(self):
+        self.speech.add_text('そういえば、さぼてんの種を拾ったんですよね。'
+                             '一緒に育てませんか？')
+        return self.speech.speak()
+
+    def base_launch_response(self, height):
+        self.speech.add_text(f'はい、きみのサボテンはこちらです。'
+                             f'全長は{height}ミリメートルです。')
+        return self.speech.speak()
+
+    def can_water_response(self, handler_input):
+        speech = f'さぼてんに水をあげますか？'
+        if utils.is_subscriptable(handler_input):
+            # TODO BuyIntentHandlerに飛ばせるか、、、？
+            # return GetFactHandler().handle(handler_input)
+            speech = f'さぼてんに綺麗な水をあげますか？'
+        self.speech.add_text(speech)
+        return self.speech.speak()
+
+    def cannot_water_response(self, height, handler_input):
+        # TODO ISP対応 課金してなければアップセル
+        if not utils.is_subscriptable(handler_input):
+            self.speech.add_text(f'綺麗な水を購入して、さぼてんの成長をもっと早くしますか？')
+        # 'さぼてんの形がどんどん変わっていくのを見るのって楽しいですよね。'
         else:
-            return handler_input.response_builder.speak(speech_text).response
+            tomorrow = self.speech.sub(value="明日", alias="あした", is_nested=True)
+            self.speech.add_text(f'また{tomorrow}水やりしてくださいね。')
+        return self.speech.speak()
+
+
+def get_scene(handler_input):
+    # 水をあげる
+    if utils.can_water(utils.get_last_watered_date(handler_input)):
+        return 'water'
+
+    # 水は上げれないけど、課金する？
+    if not utils.is_subscriptable(handler_input):
+        return 'upsell'
+
+    # 水も課金もできないので様子を見てsession終了
+    return 'check_state'
